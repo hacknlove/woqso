@@ -1,0 +1,8 @@
+- This repository is for woqso.com, a GUI that visualizes the state of repositories that use DWP/git.
+- This is not the repository for the DWP protocol or AYNIG implementation itself.
+- Treat `SPEC.md` as the primary product source of truth, then `IMPLEMENTATION_PLAN.md`, then the ticket.
+- Keep these layers clearly separated in your reasoning and writing:
+  - DWP/GC protocol facts
+  - Git inspection facts
+  - UI diagnostics and product heuristics
+- Do workflow planning in the DWP/git product context, not protocol design.
