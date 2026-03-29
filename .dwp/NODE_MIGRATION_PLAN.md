@@ -70,7 +70,7 @@
 ### Prompt Templates
 
 - [x] Extract planning prompts to Markdown templates.
-- [ ] Extract implementation prompts to Markdown templates.
+- [x] Extract implementation prompts to Markdown templates.
 - [ ] Extract QA prompts to Markdown templates.
 - [ ] Extract deploy handoff prompt to Markdown template.
 - [x] Add shared prompt fragments where duplicated context is stable.
@@ -93,21 +93,21 @@
 
 ### Implementation Flow
 
-- [ ] Migrate `implement`.
+- [x] Migrate `implement`.
 - [ ] Add `implement` tests for:
-  - [ ] happy path to `review-implementation`
+  - [x] happy path to `review-implementation`
   - [ ] plan ambiguity path to `revisit-plan`
-- [ ] Migrate `revisit-plan`.
+- [x] Migrate `revisit-plan`.
 - [ ] Add `revisit-plan` tests for:
-  - [ ] clarify plan and return to `iterate-implementation`
-  - [ ] increment `dwp-plan-version`
-- [ ] Migrate `review-implementation`.
+  - [x] clarify plan and return to `iterate-implementation`
+  - [x] increment `dwp-plan-version`
+- [x] Migrate `review-implementation`.
 - [ ] Add `review-implementation` tests for:
-  - [ ] approve to `qa-plan`
+  - [x] approve to `qa-plan`
   - [ ] request changes to `iterate-implementation`
-- [ ] Migrate `iterate-implementation`.
+- [x] Migrate `iterate-implementation`.
 - [ ] Add `iterate-implementation` tests for:
-  - [ ] revise implementation and increment version
+  - [x] revise implementation and increment version
   - [ ] return to `revisit-plan`
 
 ### QA Flow
@@ -155,7 +155,7 @@
 
 ## Current Phase
 
-- Planning flow is migrated. Implementation flow is next.
+- Implementation flow is migrated. QA flow is next.
 
 ## Notes
 

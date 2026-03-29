@@ -35,7 +35,7 @@ export function createExecFileMock({ repoRoot, outputDecisions = {}, sessionId =
       return { stdout: `${repoRoot}\n`, stderr: '' }
     }
 
-    if (command === 'git' && args[0] === 'add') {
+    if (command === 'git' && (args[0] === 'add' || (args[0] === '-C' && args[2] === 'add'))) {
       return { stdout: '', stderr: '' }
     }
 
