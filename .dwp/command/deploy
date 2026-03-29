@@ -1,19 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env node
+import { main } from './src/commands/deploy.mjs'
 
-set -euo pipefail
-
-trim() {
-  printf '%s' "$1" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
-}
-
-body="$(trim "${AYNIG_BODY:-}")"
-
-if [ -z "$body" ]; then
-  body="Deployment handoff is ready. Review the latest QA output and perform the required deployment steps."
-fi
-
-aynig set-state \
-  --dwp-state call-human \
-  --subject "deploy: ready for human deployment" \
-  --keep-trailers \
-  --prompt "$body"
+await main()

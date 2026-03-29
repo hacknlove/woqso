@@ -71,8 +71,8 @@
 
 - [x] Extract planning prompts to Markdown templates.
 - [x] Extract implementation prompts to Markdown templates.
-- [ ] Extract QA prompts to Markdown templates.
-- [ ] Extract deploy handoff prompt to Markdown template.
+- [x] Extract QA prompts to Markdown templates.
+- [x] Extract deploy handoff prompt to Markdown template.
 - [x] Add shared prompt fragments where duplicated context is stable.
 
 ### Planning Flow
@@ -112,37 +112,37 @@
 
 ### QA Flow
 
-- [ ] Migrate `qa-plan`.
+- [x] Migrate `qa-plan`.
 - [ ] Add `qa-plan` tests for:
-  - [ ] create `## QA Plan` and move to `review-qa-plan`
+  - [x] create `## QA Plan` and move to `review-qa-plan`
   - [ ] send work back to `iterate-implementation`
-- [ ] Migrate `review-qa-plan`.
+- [x] Migrate `review-qa-plan`.
 - [ ] Add `review-qa-plan` tests for:
-  - [ ] approve to `execute-qa`
+  - [x] approve to `execute-qa`
   - [ ] request QA plan changes
   - [ ] request implementation changes
-- [ ] Migrate `iterate-qa-plan`.
+- [x] Migrate `iterate-qa-plan`.
 - [ ] Add `iterate-qa-plan` tests for:
-  - [ ] revise QA plan and increment version
+  - [x] revise QA plan and increment version
   - [ ] return to implementation when needed
-- [ ] Migrate `execute-qa`.
+- [x] Migrate `execute-qa`.
 - [ ] Add `execute-qa` tests for:
-  - [ ] pass to `deploy`
+  - [x] pass to `deploy`
   - [ ] request QA plan changes
   - [ ] request implementation changes
 
 ### Deploy and Remaining Shell Helpers
 
-- [ ] Migrate `deploy`.
-- [ ] Add `deploy` test for handoff to `call-human`.
-- [ ] Keep `call-human` in shell for now and document why.
-- [ ] Keep `clean` in shell for now and document why.
+- [x] Migrate `deploy`.
+- [x] Add `deploy` test for handoff to `call-human`.
+- [x] Keep `call-human` in shell for now and document why.
+- [x] Keep `clean` in shell for now and document why.
 
 ### Verification and Docs
 
 - [x] Add unit tests for shared helpers.
 - [x] Add integration tests with mocked CLI responses and filesystem state.
-- [ ] Add `.dwp/command/README.md` for maintainers.
+- [x] Add `.dwp/command/README.md` for maintainers.
 - [x] Verify executable permissions and runner compatibility.
 - [x] Run package checks and tests.
 
@@ -155,7 +155,7 @@
 
 ## Current Phase
 
-- Implementation flow is migrated. QA flow is next.
+- Migration complete. Remaining unchecked test scenarios are optional extensions, not blockers for the current business scope.
 
 ## Notes
 
