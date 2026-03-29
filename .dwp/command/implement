@@ -1,0 +1,207 @@
+#!/bin/bash
+
+set -euo pipefail
+
+fail_with_error() {
+  local cause="$1"
+
+  trap - ERR
+  set +e
+
+  if [ -n "${repo_root:-}" ] && [ -d "$repo_root" ]; then
+    git -C "$repo_root" add -A -- . ':(exclude).dwp/logs' 2>/dev/null || true
+  fi
+
+  aynig set-state \
+    --dwp-state error \
+    --subject "implement: error" \
+    --keep-trailers \
+    --prompt "Command failed while creating the initial implementation.
+
+Cause:
+$cause"
+
+  exit 1
+}
+
+on_error() {
+  local exit_code=$?
+  local line_number="$1"
+
+  fail_with_error "${BASH_COMMAND} (line ${line_number}, exit ${exit_code})"
+}
+
+trap 'on_error "$LINENO"' ERR
+
+trim() {
+  printf '%s' "$1" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
+}
+
+body="$(trim "${AYNIG_BODY:-}")"
+ticket_input="$(trim "${AYNIG_TRAILER_DWP_TICKET:-}")"
+planner_session_id="$(trim "${AYNIG_TRAILER_DWP_PLANNER_SESSION_ID:-}")"
+current_plan_version="$(trim "${AYNIG_TRAILER_DWP_PLAN_VERSION:-}")"
+
+if [ -z "$ticket_input" ]; then
+  fail_with_error "Missing dwp-ticket trailer"
+fi
+
+if [ -z "$planner_session_id" ]; then
+  fail_with_error "Missing dwp-planner-session-id trailer"
+fi
+
+if [ -z "$current_plan_version" ]; then
+  fail_with_error "Missing dwp-plan-version trailer"
+fi
+
+if ! [[ "$current_plan_version" =~ ^[0-9]+$ ]]; then
+  fail_with_error "Invalid dwp-plan-version trailer: $current_plan_version"
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+case "$ticket_input" in
+  /*) ticket_path="$ticket_input" ;;
+  *) ticket_path="$repo_root/$ticket_input" ;;
+esac
+
+if [ ! -f "$ticket_path" ]; then
+  fail_with_error "Ticket not found: $ticket_path"
+fi
+
+ticket_file="$(basename "$ticket_path")"
+ticket_name="${ticket_file%.md}"
+relative_ticket_path="${ticket_path#$repo_root/}"
+commit_hash="$(trim "${AYNIG_COMMIT_HASH:-}")"
+
+if [ -z "$commit_hash" ]; then
+  fail_with_error "Missing AYNIG_COMMIT_HASH"
+fi
+
+logs_dir="$repo_root/.dwp/logs"
+output_path="$logs_dir/dwp-output-${commit_hash}.md"
+relative_output_path="${output_path#$repo_root/}"
+run_title="${commit_hash}-implement"
+
+mkdir -p "$logs_dir"
+: > "$output_path"
+
+prompt=$(cat <<EOF
+You are creating the initial implementation for one ticket in the woqso.com product repo.
+
+Your job:
+1. Read the product context and the approved ticket plan.
+2. Decide whether you can make a credible first implementation pass from the available information.
+3. If yes, implement the ticket in the repository and run focused verification.
+4. In all cases, write a short handoff message for the next actor in the output file.
+
+Repository context:
+- This repository is for woqso.com, a GUI that visualizes the state of repositories that use DWP/git.
+- This is not the repository for the DWP protocol or AYNIG implementation itself.
+- Treat SPEC.md as the primary product source of truth, then IMPLEMENTATION_PLAN.md, then the ticket.
+- Keep these layers clearly separated in your reasoning and writing:
+  - DWP/GC protocol facts
+  - Git inspection facts
+  - UI diagnostics and product heuristics
+- This app is read-only in v1 except for explicit remote fetch.
+
+Decision rule:
+- First decide whether you can create a credible, reviewable implementation pass from the available information.
+- Choose review-implementation when you can implement the ticket with reasonable confidence and leave the repo in a state ready for code review.
+- Choose revisit-plan when implementation work reveals a real plan ambiguity, contradiction, or missing guidance that should be resolved by the planner before implementation continues.
+- Choose call-human only when human clarification is truly required to implement the approved plan responsibly.
+- Do not use call-human just because there are minor open questions; make the most reasonable implementation choices you can infer from the repo and call out caveats in the handoff.
+- Prefer revisit-plan over call-human when the planner can likely unblock the issue from existing repo context.
+
+Implementation requirements:
+- Implement the approved ticket plan in the repository.
+- Stay within the ticket scope.
+- Keep protocol facts, Git inspection facts, and UI heuristics clearly separated in code and product language.
+- Do not modify unrelated files.
+- Run focused verification that is appropriate for the changes you make.
+
+Required output file contract:
+- Create or refresh the file at $relative_output_path.
+- The first line must be exactly one of:
+  - Decision: review-implementation
+  - Decision: revisit-plan
+  - Decision: call-human
+- After the decision line, write concise Markdown for the next actor.
+- Keep the file focused on the next actor. Do not include system logs, raw tool output, or irrelevant analysis.
+
+What to write in the output file:
+- If the decision is review-implementation, summarize what you implemented, list the verification you ran and the result, and mention important caveats, assumptions, or follow-up risks for the reviewer.
+- If the decision is revisit-plan, explain what you discovered during implementation, what question or plan change is needed, what partial implementation work already exists, and what the planner should resolve before implementation continues.
+- If the decision is call-human, explain what is missing and why that blocks a responsible implementation pass.
+
+Files:
+- Target ticket: $relative_ticket_path
+- Output file: $relative_output_path
+EOF
+)
+
+if [ -n "$body" ]; then
+  prompt="$prompt
+
+Additional implementation instructions:
+$body"
+fi
+
+opencode run \
+  -m openai/gpt-5.4 \
+  --dir "$repo_root" \
+  --title "$run_title" \
+  -f "$repo_root/SPEC.md" \
+  -f "$repo_root/IMPLEMENTATION_PLAN.md" \
+  -f "$ticket_path" \
+  -f "$output_path" \
+  "$prompt"
+
+implementer_session_id="$(
+  opencode session list --max-count 50 --format json |
+    jq -r --arg title "$run_title" --arg dir "$repo_root" '
+      map(select(.title == $title and .directory == $dir)) | first | .id // empty
+    '
+)"
+
+if [ -z "$implementer_session_id" ]; then
+  fail_with_error "Unable to determine opencode session id"
+fi
+
+output_body="$(<"$output_path")"
+
+if [ -z "$output_body" ]; then
+  fail_with_error "Output file was empty at ${relative_output_path}"
+fi
+
+IFS= read -r decision_line < "$output_path"
+decision_line="$(trim "$decision_line")"
+
+case "$decision_line" in
+  "Decision: review-implementation")
+    next_state="review-implementation"
+    next_subject="implement: create ${ticket_name} implementation"
+    ;;
+  "Decision: revisit-plan")
+    next_state="revisit-plan"
+    next_subject="implement: revisit ${ticket_name} plan"
+    ;;
+  "Decision: call-human")
+    next_state="call-human"
+    next_subject="implement: needs human input for ${ticket_name}"
+    ;;
+  *)
+    fail_with_error "Invalid output decision in ${relative_output_path}: $decision_line"
+    ;;
+esac
+
+git -C "$repo_root" add -A -- . ':(exclude).dwp/logs'
+aynig set-state \
+  --dwp-state "$next_state" \
+  --subject "$next_subject" \
+  --trailer "dwp-ticket: ${relative_ticket_path}" \
+  --trailer "dwp-plan-version: ${current_plan_version}" \
+  --trailer "dwp-planner-session-id: ${planner_session_id}" \
+  --trailer "dwp-implementation-version: 1" \
+  --trailer "dwp-implementer-session-id: ${implementer_session_id}" \
+  --prompt "$output_body"

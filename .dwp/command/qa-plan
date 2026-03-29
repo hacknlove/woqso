@@ -1,0 +1,220 @@
+#!/bin/bash
+
+set -euo pipefail
+
+fail_with_error() {
+  local cause="$1"
+
+  trap - ERR
+  set +e
+
+  if [ -n "${ticket_path:-}" ] && [ -f "$ticket_path" ]; then
+    git add "$ticket_path" 2>/dev/null || true
+  fi
+
+  aynig set-state \
+    --dwp-state error \
+    --subject "qa-plan: error" \
+    --keep-trailers \
+    --prompt "Command failed while creating the initial QA plan.
+
+Cause:
+$cause"
+
+  exit 1
+}
+
+on_error() {
+  local exit_code=$?
+  local line_number="$1"
+
+  fail_with_error "${BASH_COMMAND} (line ${line_number}, exit ${exit_code})"
+}
+
+trap 'on_error "$LINENO"' ERR
+
+trim() {
+  printf '%s' "$1" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
+}
+
+body="$(trim "${AYNIG_BODY:-}")"
+ticket_input="$(trim "${AYNIG_TRAILER_DWP_TICKET:-}")"
+planner_session_id="$(trim "${AYNIG_TRAILER_DWP_PLANNER_SESSION_ID:-}")"
+current_plan_version="$(trim "${AYNIG_TRAILER_DWP_PLAN_VERSION:-}")"
+implementer_session_id="$(trim "${AYNIG_TRAILER_DWP_IMPLEMENTER_SESSION_ID:-}")"
+current_implementation_version="$(trim "${AYNIG_TRAILER_DWP_IMPLEMENTATION_VERSION:-}")"
+
+if [ -z "$ticket_input" ]; then
+  fail_with_error "Missing dwp-ticket trailer"
+fi
+
+if [ -z "$planner_session_id" ]; then
+  fail_with_error "Missing dwp-planner-session-id trailer"
+fi
+
+if [ -z "$current_plan_version" ] || ! [[ "$current_plan_version" =~ ^[0-9]+$ ]]; then
+  fail_with_error "Invalid dwp-plan-version trailer: ${current_plan_version:-<empty>}"
+fi
+
+if [ -z "$implementer_session_id" ]; then
+  fail_with_error "Missing dwp-implementer-session-id trailer"
+fi
+
+if [ -z "$current_implementation_version" ] || ! [[ "$current_implementation_version" =~ ^[0-9]+$ ]]; then
+  fail_with_error "Invalid dwp-implementation-version trailer: ${current_implementation_version:-<empty>}"
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+case "$ticket_input" in
+  /*) ticket_path="$ticket_input" ;;
+  *) ticket_path="$repo_root/$ticket_input" ;;
+esac
+
+if [ ! -f "$ticket_path" ]; then
+  fail_with_error "Ticket not found: $ticket_path"
+fi
+
+ticket_file="$(basename "$ticket_path")"
+ticket_name="${ticket_file%.md}"
+relative_ticket_path="${ticket_path#$repo_root/}"
+commit_hash="$(trim "${AYNIG_COMMIT_HASH:-}")"
+
+if [ -z "$commit_hash" ]; then
+  fail_with_error "Missing AYNIG_COMMIT_HASH"
+fi
+
+logs_dir="$repo_root/.dwp/logs"
+output_path="$logs_dir/dwp-output-${commit_hash}.md"
+relative_output_path="${output_path#$repo_root/}"
+run_title="${commit_hash}-qa-plan"
+
+mkdir -p "$logs_dir"
+: > "$output_path"
+
+prompt=$(cat <<EOF
+You are creating the initial QA plan for one ticket in the woqso.com product repo.
+
+Your job:
+1. Read the product context, approved implementation plan, current ticket, and current implementation state.
+2. Decide whether there is enough information to write a credible QA plan.
+3. If yes, update the ticket with that QA plan.
+4. In all cases, write a short handoff message for the next actor in the output file.
+
+Repository context:
+- This repository is for woqso.com, a GUI that visualizes the state of repositories that use DWP/git.
+- This is not the repository for the DWP protocol or AYNIG implementation itself.
+- Treat SPEC.md as the primary product source of truth, then IMPLEMENTATION_PLAN.md, then the ticket.
+- Keep these layers clearly separated in your reasoning and writing:
+  - DWP/GC protocol facts
+  - Git inspection facts
+  - UI diagnostics and product heuristics
+
+Decision rule:
+- Choose review-qa-plan when you can create a credible, actionable QA plan from the available information.
+- Choose iterate-implementation when the current implementation is not yet in a shape that supports a credible QA plan and implementation work should continue first.
+- Choose call-human only when human clarification is truly required to define a useful QA plan.
+
+Required output file contract:
+- Create or refresh the file at $relative_output_path.
+- The first line must be exactly one of:
+  - Decision: review-qa-plan
+  - Decision: iterate-implementation
+  - Decision: call-human
+- After the decision line, write concise Markdown for the next actor.
+- Keep the file focused on the next actor. Do not include system logs, raw tool output, or irrelevant analysis.
+
+What to write in the output file:
+- If the decision is review-qa-plan, summarize the QA plan you added to the ticket and call out important caveats or risks.
+- If the decision is iterate-implementation, explain what implementation gaps prevent credible QA planning and what should change first.
+- If the decision is call-human, explain what is missing and why that blocks QA planning.
+
+If the decision is review-qa-plan, you must also update the ticket:
+- Edit the attached ticket file in place.
+- Add or replace a ## QA Plan section in the ticket.
+- The ## QA Plan section must contain these subsections exactly:
+  - ### Objective
+  - ### Scope
+  - ### Checks
+  - ### Risks
+  - ### Exit Criteria
+- Keep the QA plan concrete, actionable, and aligned with the ticket deliverable.
+- Do not modify unrelated ticket content.
+
+If the decision is iterate-implementation or call-human:
+- Do not edit unrelated ticket content.
+- Only update the ticket if you are creating or refreshing the ## QA Plan section as part of a review-qa-plan decision.
+
+Files:
+- Target ticket: $relative_ticket_path
+- Output file: $relative_output_path
+EOF
+)
+
+if [ -n "$body" ]; then
+  prompt="$prompt
+
+Additional QA planning instructions:
+$body"
+fi
+
+opencode run \
+  -m openai/gpt-5.4 \
+  --dir "$repo_root" \
+  --title "$run_title" \
+  -f "$repo_root/SPEC.md" \
+  -f "$repo_root/IMPLEMENTATION_PLAN.md" \
+  -f "$ticket_path" \
+  -f "$output_path" \
+  "$prompt"
+
+qa_planner_session_id="$(
+  opencode session list --max-count 50 --format json |
+    jq -r --arg title "$run_title" --arg dir "$repo_root" '
+      map(select(.title == $title and .directory == $dir)) | first | .id // empty
+    '
+)"
+
+if [ -z "$qa_planner_session_id" ]; then
+  fail_with_error "Unable to determine opencode session id"
+fi
+
+output_body="$(<"$output_path")"
+
+if [ -z "$output_body" ]; then
+  fail_with_error "Output file was empty at ${relative_output_path}"
+fi
+
+IFS= read -r decision_line < "$output_path"
+decision_line="$(trim "$decision_line")"
+
+case "$decision_line" in
+  "Decision: review-qa-plan")
+    next_state="review-qa-plan"
+    next_subject="qa-plan: create ${ticket_name} qa plan"
+    ;;
+  "Decision: iterate-implementation")
+    next_state="iterate-implementation"
+    next_subject="qa-plan: request ${ticket_name} implementation changes"
+    ;;
+  "Decision: call-human")
+    next_state="call-human"
+    next_subject="qa-plan: needs human input for ${ticket_name}"
+    ;;
+  *)
+    fail_with_error "Invalid output decision in ${relative_output_path}: $decision_line"
+    ;;
+esac
+
+git add "$ticket_path"
+aynig set-state \
+  --dwp-state "$next_state" \
+  --subject "$next_subject" \
+  --trailer "dwp-ticket: ${relative_ticket_path}" \
+  --trailer "dwp-plan-version: ${current_plan_version}" \
+  --trailer "dwp-planner-session-id: ${planner_session_id}" \
+  --trailer "dwp-implementation-version: ${current_implementation_version}" \
+  --trailer "dwp-implementer-session-id: ${implementer_session_id}" \
+  --trailer "dwp-qa-plan-version: 1" \
+  --trailer "dwp-qa-planner-session-id: ${qa_planner_session_id}" \
+  --prompt "$output_body"
