@@ -15,6 +15,7 @@ export async function runOpencode(runtime, { repoRoot, title, files, prompt, ses
     args.push('-f', file)
   }
 
+  args.push('--')
   args.push(prompt)
   await runProcess(runtime, 'opencode', args, { cwd: repoRoot, maxBuffer: 10 * 1024 * 1024 })
 }

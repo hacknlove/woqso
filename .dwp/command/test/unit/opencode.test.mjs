@@ -4,6 +4,7 @@ import { runOpencode } from '../../src/shared/opencode.mjs'
 describe('runOpencode', () => {
   it('logs the prompt at debug level before running opencode', async () => {
     const messages = []
+    const calls = []
     const runtime = {
       env: {},
       logger: {
@@ -12,7 +13,10 @@ describe('runOpencode', () => {
           messages.push(message)
         },
       },
-      execFile: async () => ({ stdout: '', stderr: '' }),
+      execFile: async (command, args) => {
+        calls.push({ command, args })
+        return { stdout: '', stderr: '' }
+      },
     }
 
     await runOpencode(runtime, {
@@ -23,5 +27,9 @@ describe('runOpencode', () => {
     })
 
     expect(messages).toContain('Opencode prompt for abc123-plan:\nhello prompt')
+    expect(calls).toHaveLength(1)
+    expect(calls[0].command).toBe('opencode')
+    expect(calls[0].args.at(-2)).toBe('--')
+    expect(calls[0].args.at(-1)).toBe('hello prompt')
   })
 })
