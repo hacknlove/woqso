@@ -6,7 +6,10 @@ function createDefaultExecFile(logger) {
   return function defaultExecFile(command, args, options = {}) {
     return new Promise((resolve, reject) => {
       const { maxBuffer = Infinity, timeout = 0, ...spawnOptions } = options
-    const child = spawn(command, args, spawnOptions)
+      if (!spawnOptions.stdio) {
+        spawnOptions.stdio = ['ignore', 'pipe', 'pipe']
+      }
+      const child = spawn(command, args, spawnOptions)
     const stdoutChunks = []
     const stderrChunks = []
     let stdoutLength = 0

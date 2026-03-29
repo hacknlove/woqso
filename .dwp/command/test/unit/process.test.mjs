@@ -59,4 +59,20 @@ describe('runProcess', () => {
       `[warn] Command timed out after 50ms: ${process.execPath} -e setTimeout(() => {}, 1000)`,
     )
   })
+
+  it('closes stdin by default for spawned children', async () => {
+    const runtime = createRuntime({
+      env: { AYNIG_LOG_LEVEL: 'debug' },
+      writeLog: () => {},
+    })
+
+    const { stdout } = await runProcess(
+      runtime,
+      process.execPath,
+      ['-e', "process.stdin.resume(); process.stdin.on('end', () => process.stdout.write('stdin-closed'))"],
+      { cwd: '/tmp', timeout: 500 },
+    )
+
+    expect(stdout).toBe('stdin-closed')
+  })
 })
