@@ -1,6 +1,14 @@
 export async function runProcess(runtime, command, args, options = {}) {
+  runtime.logger?.debug(`exec ${command} ${args.join(' ')}`)
+
   try {
-    return await runtime.execFile(command, args, options)
+    return await runtime.execFile(command, args, {
+      ...options,
+      env: {
+        ...runtime.env,
+        ...options.env,
+      },
+    })
   } catch (error) {
     const details = [error.message]
 
@@ -8,6 +16,8 @@ export async function runProcess(runtime, command, args, options = {}) {
       details.push(String(error.stderr).trim())
     }
 
-    throw new Error(details.filter(Boolean).join('\n'))
+    const message = details.filter(Boolean).join('\n')
+    runtime.logger?.error(message)
+    throw new Error(message)
   }
 }
