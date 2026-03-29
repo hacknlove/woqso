@@ -1,0 +1,14 @@
+#!/bin/bash
+
+case "$(uname)" in
+  Darwin)
+    osascript -e "display notification \"$AYNIG_BODY\" with title \"AYNIG\""
+    afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &
+    ;;
+  Linux)
+    notify-send "AYNIG" "$AYNIG_BODY"
+    paplay /usr/share/sounds/freedesktop/stereo/complete.oga >/dev/null 2>&1 &
+    ;;
+esac
+
+aynig set-working "human-turn" --lease-seconds 3600
