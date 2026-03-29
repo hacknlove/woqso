@@ -22,4 +22,41 @@ describe('runProcess', () => {
       }),
     )
   })
+
+  it('logs child stdout and stderr at debug level', async () => {
+    const messages = []
+    const runtime = createRuntime({
+      env: { AYNIG_LOG_LEVEL: 'debug' },
+      writeLog: (message) => messages.push(message),
+    })
+
+    await runProcess(
+      runtime,
+      process.execPath,
+      ['-e', "process.stdout.write('out'); process.stderr.write('err')"],
+      { cwd: '/tmp' },
+    )
+
+    expect(messages).toContain(`[debug] [${process.execPath}] stdout: out`)
+    expect(messages).toContain(`[debug] [${process.execPath}] stderr: err`)
+  })
+
+  it('fails with a timeout error when the child hangs', async () => {
+    const messages = []
+    const runtime = createRuntime({
+      env: { AYNIG_LOG_LEVEL: 'debug' },
+      writeLog: (message) => messages.push(message),
+    })
+
+    await expect(
+      runProcess(runtime, process.execPath, ['-e', 'setTimeout(() => {}, 1000)'], {
+        cwd: '/tmp',
+        timeout: 50,
+      }),
+    ).rejects.toThrow(`Command timed out after 50ms: ${process.execPath} -e setTimeout(() => {}, 1000)`)
+
+    expect(messages).toContain(
+      `[warn] Command timed out after 50ms: ${process.execPath} -e setTimeout(() => {}, 1000)`,
+    )
+  })
 })

@@ -3,6 +3,9 @@ import { runProcess } from './process.mjs'
 export async function runOpencode(runtime, { repoRoot, title, files, prompt, sessionId }) {
   runtime.logger?.info(`Starting opencode session ${title}`)
   runtime.logger?.debug(`Opencode prompt for ${title}:\n${prompt}`)
+  runtime.logger?.debug(
+    `Opencode TTY context for ${title}: stdin=${process.stdin.isTTY ? 'tty' : 'notty'}, stdout=${process.stdout.isTTY ? 'tty' : 'notty'}, stderr=${process.stderr.isTTY ? 'tty' : 'notty'}`,
+  )
   const args = ['run', '-m', 'openai/gpt-5.4', '--dir', repoRoot]
 
   if (sessionId) {
@@ -17,7 +20,12 @@ export async function runOpencode(runtime, { repoRoot, title, files, prompt, ses
 
   args.push('--')
   args.push(prompt)
-  await runProcess(runtime, 'opencode', args, { cwd: repoRoot, maxBuffer: 10 * 1024 * 1024 })
+  await runProcess(runtime, 'opencode', args, {
+    cwd: repoRoot,
+    maxBuffer: 10 * 1024 * 1024,
+    timeout: 10 * 60 * 1000,
+  })
+  runtime.logger?.info(`Completed opencode session ${title}`)
 }
 
 export async function findSessionId(runtime, { repoRoot, title }) {
