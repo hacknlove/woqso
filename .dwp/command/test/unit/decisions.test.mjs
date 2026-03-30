@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseDecision } from '../../src/shared/decisions.mjs'
+import { parseDecision } from '../../dwp.mjs'
 
 describe('parseDecision', () => {
   it('returns the declared decision when allowed', () => {

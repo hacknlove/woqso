@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { main as deploy } from '../../src/commands/deploy.mjs'
-import { main as executeQa } from '../../src/commands/execute-qa.mjs'
-import { main as iterateQaPlan } from '../../src/commands/iterate-qa-plan.mjs'
-import { main as qaPlan } from '../../src/commands/qa-plan.mjs'
-import { main as reviewQaPlan } from '../../src/commands/review-qa-plan.mjs'
+import { run } from '../../dwp.mjs'
 import { createExecFileMock, createRepoFixture, destroyRepoFixture } from './helpers.mjs'
 
 const repoRoots = []
@@ -25,7 +21,7 @@ describe('qa commands', () => {
       sessionId: 'qa-1',
     })
 
-    await qaPlan({
+    await run('qa-plan', {
       env: {
         AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md',
         AYNIG_TRAILER_DWP_PLANNER_SESSION_ID: 'planner-1',
@@ -54,7 +50,7 @@ describe('qa commands', () => {
       },
     })
 
-    await reviewQaPlan({
+    await run('review-qa-plan', {
       env: {
         AYNIG_BODY: 'The QA plan now covers the key checks.',
         AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md',
@@ -85,7 +81,7 @@ describe('qa commands', () => {
       },
     })
 
-    await iterateQaPlan({
+    await run('iterate-qa-plan', {
       env: {
         AYNIG_BODY: 'Cover the renderer preload boundary too.',
         AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md',
@@ -116,7 +112,7 @@ describe('qa commands', () => {
       },
     })
 
-    await executeQa({
+    await run('execute-qa', {
       env: {
         AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md',
         AYNIG_TRAILER_DWP_PLAN_VERSION: '2',
@@ -139,8 +135,8 @@ describe('qa commands', () => {
     const { repoRoot } = await createRepoFixture()
     repoRoots.push(repoRoot)
 
-    const exec = createExecFileMock({ repoRoot })
-    await deploy({ runtime: exec.runtime, env: {} })
+    const exec = createExecFileMock({ repoRoot, outputDecisions: { 'ghi127-deploy': 'Decision: call-human\n\nReady for human deployment.' } })
+    await run('deploy', { runtime: exec.runtime, env: { AYNIG_COMMIT_HASH: 'ghi127', AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md', AYNIG_TRAILER_DWP_PLAN_VERSION: '2', AYNIG_TRAILER_DWP_PLANNER_SESSION_ID: 'planner-1', AYNIG_TRAILER_DWP_IMPLEMENTATION_VERSION: '1', AYNIG_TRAILER_DWP_IMPLEMENTER_SESSION_ID: 'impl-1', AYNIG_TRAILER_DWP_QA_PLAN_VERSION: '1', AYNIG_TRAILER_DWP_QA_PLANNER_SESSION_ID: 'qa-1' } })
 
     const setStateCall = exec.calls.find((call) => call.command === 'aynig')
     expect(setStateCall.args).toContain('call-human')

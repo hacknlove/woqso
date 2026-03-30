@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createLogger, normalizeLogLevel } from '../../src/shared/logger.mjs'
+import { createLogger, normalizeLogLevel } from '../../dwp.mjs'
 
 describe('logger', () => {
   it('normalizes unsupported levels to error', () => {

@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { runProcess } from '../../src/shared/process.mjs'
-import { createRuntime } from '../../src/shared/runtime.mjs'
+import { createRuntime, runProcess } from '../../dwp.mjs'
 
 describe('runProcess', () => {
   it('forwards the runtime environment to child processes', async () => {

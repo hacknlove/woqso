@@ -2,8 +2,8 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { renderPromptTemplate } from '../../src/shared/prompts.mjs'
-import { createRuntime } from '../../src/shared/runtime.mjs'
+import { renderPromptTemplate } from '../../dwp.mjs'
+import { createRuntime } from '../../dwp.mjs'
 
 const tempDirs = []
 

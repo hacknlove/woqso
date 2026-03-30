@@ -1,8 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { main as implement } from '../../src/commands/implement.mjs'
-import { main as iterateImplementation } from '../../src/commands/iterate-implementation.mjs'
-import { main as revisitPlan } from '../../src/commands/revisit-plan.mjs'
-import { main as reviewImplementation } from '../../src/commands/review-implementation.mjs'
+import { run } from '../../dwp.mjs'
 import { createExecFileMock, createRepoFixture, destroyRepoFixture } from './helpers.mjs'
 
 const repoRoots = []
@@ -24,7 +21,7 @@ describe('implementation commands', () => {
       sessionId: 'impl-1',
     })
 
-    await implement({
+    await run('implement', {
       env: {
         AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md',
         AYNIG_TRAILER_DWP_PLANNER_SESSION_ID: 'planner-1',
@@ -54,7 +51,7 @@ describe('implementation commands', () => {
       },
     })
 
-    await revisitPlan({
+    await run('revisit-plan', {
       env: {
         AYNIG_BODY: 'The plan is ambiguous around verification scope.',
         AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md',
@@ -84,7 +81,7 @@ describe('implementation commands', () => {
       },
     })
 
-    await reviewImplementation({
+    await run('review-implementation', {
       env: {
         AYNIG_BODY: 'Implemented the core behavior and ran focused verification.',
         AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md',
@@ -113,7 +110,7 @@ describe('implementation commands', () => {
       },
     })
 
-    await iterateImplementation({
+    await run('iterate-implementation', {
       env: {
         AYNIG_BODY: 'Tighten error handling around state parsing.',
         AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md',

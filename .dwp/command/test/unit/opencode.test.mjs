@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { runOpencode } from '../../src/shared/opencode.mjs'
+import { runOpencode } from '../../dwp.mjs'
 
 describe('runOpencode', () => {
   it('logs the prompt at debug level before running opencode', async () => {

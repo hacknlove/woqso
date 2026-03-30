@@ -1,8 +1,6 @@
 import fs from 'node:fs/promises'
 import { afterEach, describe, expect, it } from 'vitest'
-import { main as iteratePlan } from '../../src/commands/iterate-plan.mjs'
-import { main as plan } from '../../src/commands/plan.mjs'
-import { main as reviewPlan } from '../../src/commands/review-plan.mjs'
+import { run } from '../../dwp.mjs'
 import { createExecFileMock, createRepoFixture, destroyRepoFixture } from './helpers.mjs'
 
 const repoRoots = []
@@ -24,7 +22,7 @@ describe('planning commands', () => {
       sessionId: 'planner-1',
     })
 
-    await plan({
+    await run('plan', {
       env: {
         AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md',
         AYNIG_COMMIT_HASH: 'abc123',
@@ -57,7 +55,7 @@ describe('planning commands', () => {
       },
     })
 
-    await reviewPlan({
+    await run('review-plan', {
       env: {
         AYNIG_BODY: 'The latest architect notes are positive.',
         AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md',
@@ -86,7 +84,7 @@ describe('planning commands', () => {
       },
     })
 
-    await iteratePlan({
+    await run('iterate-plan', {
       env: {
         AYNIG_BODY: 'Please tighten the verification section.',
         AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md',
@@ -118,7 +116,7 @@ describe('planning commands', () => {
       sessionId: 'planner-2',
     })
 
-    await plan({
+    await run('plan', {
       env: {
         AYNIG_TRAILER_DWP_TICKET: 'tickets/sample-ticket.md',
         AYNIG_COMMIT_HASH: 'abc126',

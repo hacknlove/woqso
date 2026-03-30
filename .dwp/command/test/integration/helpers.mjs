@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { createRuntime } from '../../src/shared/runtime.mjs'
+import { createRuntime } from '../../dwp.mjs'
 
 export async function createRepoFixture() {
   const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'dwp-command-'))

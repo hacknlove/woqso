@@ -1,4 +1,3 @@
 #!/usr/bin/env node
-import { main } from './src/commands/review-qa-plan.mjs'
-
-await main()
+import { run } from './dwp.mjs'
+await run('review-qa-plan')
