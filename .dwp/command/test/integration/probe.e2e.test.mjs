@@ -77,6 +77,7 @@ describe('probe (E2E-ish)', () => {
         PATH: `${binDir}:${process.env.PATH}`,
         DWP_OPENCODE_CALLS: opencodeCalls,
         DWP_AYNIG_CALLS: aynigCalls,
+        OPENCODE_MODEL: 'opencode/mimo-v2-pro-free',
         OPENCODE_TIMEOUT_MS: '2000',
         AYNIG_COMMIT_HASH: 'e2e123',
         AYNIG_BODY: prompt,
@@ -87,6 +88,8 @@ describe('probe (E2E-ish)', () => {
     expect(opencode.args[0]).toBe('run')
     expect(opencode.args).toContain('--title')
     expect(opencode.args).toContain('e2e123-probe')
+    expect(opencode.args).toContain('--model')
+    expect(opencode.args).toContain('opencode/mimo-v2-pro-free')
     expect(opencode.args.at(-2)).toBe('--')
     expect(opencode.args.at(-1)).toBe(prompt)
     // The key property: stdin reaches EOF quickly (not waiting for user input).
