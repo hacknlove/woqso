@@ -35,11 +35,12 @@ export function createLogger({ level = 'info', write } = {}) {
   }
 }
 
-function createDefaultExecFile(logger) {
+function createDefaultExecFile(logger, baseEnv) {
   return function execFile(command, args, options = {}) {
     return new Promise((resolve, reject) => {
       const { maxBuffer = Infinity, timeout = 0, ...spawnOptions } = options
       if (!spawnOptions.stdio) spawnOptions.stdio = ['ignore', 'pipe', 'pipe']
+      if (!spawnOptions.env) spawnOptions.env = { ...(baseEnv || {}), ...(options.env || {}) }
 
       const child = spawn(command, args, spawnOptions)
       const stdoutChunks = []
@@ -129,7 +130,7 @@ export function createRuntime(overrides = {}) {
   return {
     env,
     fs: overrides.fs ?? fs,
-    execFile: overrides.execFile ?? createDefaultExecFile(logger),
+    execFile: overrides.execFile ?? createDefaultExecFile(logger, env),
     logger,
   }
 }
@@ -660,7 +661,7 @@ async function execProbeCommand({ env, runtime }) {
   })
 }
 
-export async function run(state, { env = process.env, runtime = createRuntime() } = {}) {
+export async function run(state, { env = process.env, runtime = createRuntime({ env }) } = {}) {
   let repoRoot = ''
   let ticketPath = ''
   try {
