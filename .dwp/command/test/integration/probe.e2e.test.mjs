@@ -25,7 +25,7 @@ async function makeExecutable(filePath, content) {
 }
 
 describe('probe (E2E-ish)', () => {
-  it('runs opencode with the body verbatim and always transitions to done (no interactive hang)', async () => {
+  it('runs opencode with the body verbatim and stdin reaches EOF quickly (no interactive hang)', async () => {
     const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'dwp-probe-'))
     fixtures.push(repoRoot)
 
@@ -33,11 +33,11 @@ describe('probe (E2E-ish)', () => {
     await execFile('git', ['init'], { cwd: repoRoot })
 
     const binDir = path.join(repoRoot, 'bin')
-    const callsDir = path.join(repoRoot, '.dwp', 'logs')
-    await fs.mkdir(callsDir, { recursive: true })
+    const logsDir = path.join(repoRoot, '.dwp', 'logs')
+    await fs.mkdir(logsDir, { recursive: true })
 
-    const opencodeCalls = path.join(callsDir, 'opencode-calls.json')
-    const aynigCalls = path.join(callsDir, 'aynig-calls.json')
+    const opencodeCalls = path.join(logsDir, 'opencode-calls.json')
+    const aynigCalls = path.join(logsDir, 'aynig-calls.json')
 
     // Fake opencode:
     // - writes argv to file
@@ -77,6 +77,7 @@ describe('probe (E2E-ish)', () => {
         PATH: `${binDir}:${process.env.PATH}`,
         DWP_OPENCODE_CALLS: opencodeCalls,
         DWP_AYNIG_CALLS: aynigCalls,
+        DWP_PROBE_TIMEOUT_MS: '2000',
         AYNIG_COMMIT_HASH: 'e2e123',
         AYNIG_BODY: prompt,
       },

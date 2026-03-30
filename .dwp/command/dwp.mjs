@@ -262,14 +262,14 @@ export function buildOutputPaths(repoRoot, commitHash) {
 // opencode
 // -----------------
 
-export async function runOpencode(runtime, { repoRoot, title, files, prompt }) {
+export async function runOpencode(runtime, { repoRoot, title, files, prompt, timeoutMs }) {
   runtime.logger?.debug?.(`Opencode prompt for ${title}:\n${prompt}`)
   const args = ['run', '--title', title]
   for (const file of files) {
     args.push('-f', file)
   }
   args.push('--', prompt)
-  await runtime.execFile('opencode', args, { cwd: repoRoot })
+  await runtime.execFile('opencode', args, { cwd: repoRoot, timeout: timeoutMs ?? 0 })
 }
 
 export async function findSessionId(runtime, { repoRoot, title }) {
@@ -643,11 +643,14 @@ async function execProbeCommand({ env, runtime }) {
 
   // Run opencode with the body verbatim.
   // The prompt itself is responsible for telling opencode what to do.
+  const timeoutMs = Number(env.DWP_PROBE_TIMEOUT_MS || 0) || 0
+
   await runOpencode(runtime, {
     repoRoot,
     title,
     files: [],
     prompt: body,
+    timeoutMs,
   })
 
   // Always end in a non-workflow state.
