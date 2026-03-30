@@ -97,6 +97,8 @@ describe('probe (E2E-ish)', () => {
 
     const aynig = JSON.parse(await fs.readFile(aynigCalls, 'utf8'))
     expect(aynig.args[0]).toBe('set-state')
-    expect(aynig.args).toContain('done')
+    const idx = aynig.args.indexOf('--dwp-state')
+    expect(idx).toBeGreaterThan(-1)
+    expect(aynig.args[idx + 1]).toBe('done')
   })
 })

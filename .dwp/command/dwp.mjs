@@ -249,7 +249,21 @@ export async function stageTicket(runtime, ticketPath, repoRoot) {
 }
 
 export async function stageRepoExcludingLogs(runtime, repoRoot) {
-  await runtime.execFile('git', ['-C', repoRoot, 'add', '-A', '--', '.', ':(exclude).dwp/logs'], { cwd: repoRoot })
+  // Prefer git pathspec exclude (fast), but fall back for older git builds.
+  try {
+    await runtime.execFile('git', ['-C', repoRoot, 'add', '-A', '--', '.', ':(exclude).dwp/logs'], { cwd: repoRoot })
+    return
+  } catch (error) {
+    runtime.logger?.warn?.(`git add with :(exclude) failed; falling back: ${error?.message ?? String(error)}`)
+  }
+
+  await runtime.execFile('git', ['-C', repoRoot, 'add', '-A'], { cwd: repoRoot })
+  // Best-effort unstage logs.
+  try {
+    await runtime.execFile('git', ['-C', repoRoot, 'reset', '--', '.dwp/logs'], { cwd: repoRoot })
+  } catch {
+    // ignore
+  }
 }
 
 export function buildOutputPaths(repoRoot, commitHash) {
