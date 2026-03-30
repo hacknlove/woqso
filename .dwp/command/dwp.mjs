@@ -689,7 +689,7 @@ async function execProbeCommand({ env, runtime }) {
     repoRoot,
     title,
     files: [],
-    prompt: body,
+    prompt: applyNonInteractiveGuard(body),
     timeoutMs,
   })
 

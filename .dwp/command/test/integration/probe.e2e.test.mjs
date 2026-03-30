@@ -91,7 +91,10 @@ describe('probe (E2E-ish)', () => {
     expect(opencode.args).toContain('--model')
     expect(opencode.args).toContain('opencode/mimo-v2-pro-free')
     expect(opencode.args.at(-2)).toBe('--')
-    expect(opencode.args.at(-1)).toBe(prompt)
+    const sentPrompt = opencode.args.at(-1)
+    expect(sentPrompt).toContain('SYSTEM:')
+    expect(sentPrompt).toContain('non-interactive')
+    expect(sentPrompt).toContain(prompt)
     // The key property: stdin reaches EOF quickly (not waiting for user input).
     expect(opencode.stdinEndedQuickly).toBe(true)
 
