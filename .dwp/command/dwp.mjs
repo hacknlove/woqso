@@ -629,15 +629,51 @@ const COMMANDS = {
   },
 }
 
+async function execProbeCommand({ env, runtime }) {
+  const body = getBody(env)
+  const commitHash = requireValue(getCommitHash(env), 'Missing AYNIG_COMMIT_HASH')
+  const repoRoot = await getRepoRoot(runtime)
+  const { logsDir, outputPath } = buildOutputPaths(repoRoot, commitHash)
+
+  await ensureDir(runtime, logsDir)
+  await resetFile(runtime, outputPath)
+
+  const title = runTitle(commitHash, 'probe')
+
+  // Run opencode with the body verbatim.
+  // The prompt itself is responsible for telling opencode what to do.
+  await runOpencode(runtime, {
+    repoRoot,
+    title,
+    files: [],
+    prompt: body,
+  })
+
+  // Always end in a non-workflow state.
+  await setState(runtime, {
+    cwd: repoRoot,
+    state: 'done',
+    subject: 'done',
+    trailers: [],
+    prompt: '',
+    keepTrailers: false,
+  })
+}
+
 export async function run(state, { env = process.env, runtime = createRuntime() } = {}) {
   let repoRoot = ''
   let ticketPath = ''
   try {
-    const config = COMMANDS[state]
-    requireValue(config, `Unknown state: ${state}`)
-
     // quick validation that repo context exists
     repoRoot = await getRepoRoot(runtime)
+
+    if (state === 'probe') {
+      await execProbeCommand({ env, runtime })
+      return
+    }
+
+    const config = COMMANDS[state]
+    requireValue(config, `Unknown state: ${state}`)
 
     // run opencode-backed ticket commands
     await execTicketCommand({ state, env, runtime })
