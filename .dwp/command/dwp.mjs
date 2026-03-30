@@ -297,15 +297,19 @@ export async function findSessionId(runtime, { repoRoot, title }) {
 // aynig
 // -----------------
 
-export async function setState(runtime, { cwd, state, subject, trailers, prompt, keepTrailers = false }) {
-  const args = ['set-state', state, subject]
-  if (keepTrailers) args.push('--keep-trailers')
+export async function setState(runtime, { cwd, state, subject, trailers, prompt, keepTrailers = false, dwpRemote = '' }) {
+  // aynig set-state (Go) uses flags, not positional args.
+  const args = ['set-state', '--dwp-state', state, '--subject', subject]
+
+  if (dwpRemote) args.push('--dwp-remote', dwpRemote)
+  // keepTrailers is not a supported flag in aynig set-state; we control trailers explicitly.
   for (const trailer of trailers ?? []) {
     args.push('--trailer', trailer)
   }
   if (prompt) {
     args.push('--prompt', prompt)
   }
+
   await runtime.execFile('aynig', args, { cwd })
 }
 
@@ -661,6 +665,9 @@ async function execProbeCommand({ env, runtime }) {
     prompt: body,
     timeoutMs,
   })
+
+  // Probe is for workflow development; ensure any edits are staged before committing state.
+  await stageRepoExcludingLogs(runtime, repoRoot)
 
   // Always end in a non-workflow state.
   await setState(runtime, {
