@@ -1,1 +1,0 @@
-ERROR: No conozco tu color favorito; necesito que me lo indiques para generar el haiku.
