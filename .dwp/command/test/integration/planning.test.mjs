@@ -99,7 +99,6 @@ describe('planning commands', () => {
     expect(ticketAdd.args[1]).toBe(ticketPath)
 
     const setStateCall = exec.calls.find((call) => call.command === 'aynig')
-    expect(setStateCall.args).toContain('--keep-trailers')
     expect(setStateCall.args).toContain('review-plan')
     expect(setStateCall.args).toContain('dwp-plan-version: 3')
   })
@@ -127,6 +126,6 @@ describe('planning commands', () => {
     const setStateCall = exec.calls.findLast((call) => call.command === 'aynig')
     expect(setStateCall.args).toContain('error')
     expect(setStateCall.args).toContain('plan: error')
-    expect(setStateCall.args).toContain('--keep-trailers')
+    // aynig set-state doesn't support --keep-trailers; trailers are passed explicitly.
   })
 })

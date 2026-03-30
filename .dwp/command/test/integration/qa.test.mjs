@@ -141,6 +141,6 @@ describe('qa commands', () => {
     const setStateCall = exec.calls.find((call) => call.command === 'aynig')
     expect(setStateCall.args).toContain('call-human')
     expect(setStateCall.args).toContain('deploy: ready for human deployment')
-    expect(setStateCall.args).toContain('--keep-trailers')
+    // aynig set-state doesn't support --keep-trailers; trailers are passed explicitly.
   })
 })
