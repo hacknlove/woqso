@@ -263,13 +263,22 @@ export function buildOutputPaths(repoRoot, commitHash) {
 // -----------------
 
 export async function runOpencode(runtime, { repoRoot, title, files, prompt, timeoutMs }) {
+  const env = runtime.env ?? process.env
   runtime.logger?.debug?.(`Opencode prompt for ${title}:\n${prompt}`)
+
+  const bin = env.OPENCODE_BIN || 'opencode'
+  const model = env.OPENCODE_MODEL || ''
+
   const args = ['run', '--title', title]
+  if (model) {
+    args.push('--model', model)
+  }
   for (const file of files) {
     args.push('-f', file)
   }
   args.push('--', prompt)
-  await runtime.execFile('opencode', args, { cwd: repoRoot, timeout: timeoutMs ?? 0 })
+
+  await runtime.execFile(bin, args, { cwd: repoRoot, timeout: timeoutMs ?? 0 })
 }
 
 export async function findSessionId(runtime, { repoRoot, title }) {
@@ -643,7 +652,7 @@ async function execProbeCommand({ env, runtime }) {
 
   // Run opencode with the body verbatim.
   // The prompt itself is responsible for telling opencode what to do.
-  const timeoutMs = Number(env.DWP_PROBE_TIMEOUT_MS || 0) || 0
+  const timeoutMs = Number(env.OPENCODE_TIMEOUT_MS || 0) || 0
 
   await runOpencode(runtime, {
     repoRoot,
