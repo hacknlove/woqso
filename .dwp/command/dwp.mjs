@@ -357,6 +357,19 @@ function runTitle(commitHash, suffix) {
   return `${commitHash}-${suffix}`
 }
 
+const NON_INTERACTIVE_GUARD = `SYSTEM:
+You are running in non-interactive (batch) mode.
+- Do NOT ask the user questions.
+- Do NOT use the tool named "question".
+- If required information is missing or ambiguous, do your best with reasonable assumptions.
+- If you truly cannot proceed safely without user input, output "Decision: call-human" with a short explanation of what you need.
+- Never wait for input. Always finish by writing the output file and exiting.
+`
+
+function applyNonInteractiveGuard(prompt) {
+  return `${NON_INTERACTIVE_GUARD}\n${prompt}`
+}
+
 // Shared command executor.
 async function execTicketCommand({ state, env, runtime }) {
   const body = getBody(env)
@@ -396,7 +409,7 @@ async function execTicketCommand({ state, env, runtime }) {
       ticketPath,
       outputPath,
     ],
-    prompt: tpl,
+    prompt: applyNonInteractiveGuard(tpl),
   })
 
   const sessionId = await findSessionId(runtime, { repoRoot, title })
