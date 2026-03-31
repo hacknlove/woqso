@@ -64,7 +64,8 @@ export function createExecFileMock({ repoRoot, outputDecisions = {}, sessionId =
     throw new Error(`Unexpected command: ${command} ${args.join(' ')}`)
   }
 
-  const runtime = createRuntime({ execFile, fs })
+  // Use a clean env so machine-local OPENCODE_* variables don't affect tests.
+  const runtime = createRuntime({ execFile, fs, env: {} })
 
   return {
     runtime,

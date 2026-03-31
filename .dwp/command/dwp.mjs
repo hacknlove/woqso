@@ -38,7 +38,7 @@ export function createLogger({ level = 'info', write } = {}) {
 function createDefaultExecFile(logger, baseEnv) {
   return function execFile(command, args, options = {}) {
     return new Promise((resolve, reject) => {
-      const { maxBuffer = Infinity, timeout = 0, ...spawnOptions } = options
+      const { maxBuffer = Infinity, timeout = 0, idleTimeout = 0, ...spawnOptions } = options
       if (!spawnOptions.stdio) spawnOptions.stdio = ['ignore', 'pipe', 'pipe']
       if (!spawnOptions.env) spawnOptions.env = { ...(baseEnv || {}), ...(options.env || {}) }
 
@@ -49,6 +49,7 @@ function createDefaultExecFile(logger, baseEnv) {
       let stderrLength = 0
       let settled = false
       let timeoutId
+      let idleTimeoutId
 
       const appendChunk = (chunks, chunk, currentLength) => {
         const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
@@ -56,9 +57,14 @@ function createDefaultExecFile(logger, baseEnv) {
         return currentLength + buffer.length
       }
 
+      const clearTimers = () => {
+        if (timeoutId) clearTimeout(timeoutId)
+        if (idleTimeoutId) clearTimeout(idleTimeoutId)
+      }
+
       const finishError = (error) => {
         if (settled) return
-        if (timeoutId) clearTimeout(timeoutId)
+        clearTimers()
         settled = true
         error.stdout = Buffer.concat(stdoutChunks).toString()
         error.stderr = Buffer.concat(stderrChunks).toString()
@@ -67,7 +73,7 @@ function createDefaultExecFile(logger, baseEnv) {
 
       const finishOk = () => {
         if (settled) return
-        if (timeoutId) clearTimeout(timeoutId)
+        clearTimers()
         settled = true
         resolve({
           stdout: Buffer.concat(stdoutChunks).toString(),
@@ -75,7 +81,21 @@ function createDefaultExecFile(logger, baseEnv) {
         })
       }
 
+      const resetIdleTimer = () => {
+        if (!idleTimeout || idleTimeout <= 0) return
+        if (idleTimeoutId) clearTimeout(idleTimeoutId)
+        idleTimeoutId = setTimeout(() => {
+          logger?.warn?.(`Command idle timed out after ${idleTimeout}ms: ${command} ${args.join(' ')}`)
+          child.kill('SIGTERM')
+          finishError(new Error(`Command idle timed out after ${idleTimeout}ms: ${command} ${args.join(' ')}`))
+        }, idleTimeout)
+      }
+
+      // Start idle timer from process start as well.
+      resetIdleTimer()
+
       child.stdout?.on('data', (chunk) => {
+        resetIdleTimer()
         stdoutLength = appendChunk(stdoutChunks, chunk, stdoutLength)
         logger?.debug?.(`[${command}] stdout: ${String(chunk).trimEnd()}`)
         if (stdoutLength + stderrLength > maxBuffer) {
@@ -85,6 +105,7 @@ function createDefaultExecFile(logger, baseEnv) {
       })
 
       child.stderr?.on('data', (chunk) => {
+        resetIdleTimer()
         stderrLength = appendChunk(stderrChunks, chunk, stderrLength)
         logger?.debug?.(`[${command}] stderr: ${String(chunk).trimEnd()}`)
         if (stdoutLength + stderrLength > maxBuffer) {
@@ -113,6 +134,11 @@ function createDefaultExecFile(logger, baseEnv) {
           return
         }
         finishOk()
+      })
+
+      // Stop idle timer when stdin closes too; some commands end silently.
+      child.stdin?.on?.('close', () => {
+        if (idleTimeoutId) clearTimeout(idleTimeoutId)
       })
     })
   }
@@ -287,6 +313,7 @@ function getOpencodeModel(runtime) {
 }
 
 export async function runOpencode(runtime, { repoRoot, title, files, prompt, timeoutMs }) {
+  const env = runtime.env ?? process.env
   runtime.logger?.debug?.(`Opencode prompt for ${title}:\n${prompt}`)
 
   const bin = getOpencodeBin(runtime)
@@ -301,7 +328,8 @@ export async function runOpencode(runtime, { repoRoot, title, files, prompt, tim
   }
   args.push('--', prompt)
 
-  await runtime.execFile(bin, args, { cwd: repoRoot, timeout: timeoutMs ?? 0 })
+  const idleTimeoutMs = Number(env.OPENCODE_IDLE_TIMEOUT_MS || 0) || 0
+  await runtime.execFile(bin, args, { cwd: repoRoot, timeout: timeoutMs ?? 0, idleTimeout: idleTimeoutMs })
 }
 
 export async function findSessionId(runtime, { repoRoot, title }) {

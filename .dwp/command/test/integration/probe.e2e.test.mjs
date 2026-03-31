@@ -77,6 +77,7 @@ describe('probe (E2E-ish)', () => {
         PATH: `${binDir}:${process.env.PATH}`,
         DWP_OPENCODE_CALLS: opencodeCalls,
         DWP_AYNIG_CALLS: aynigCalls,
+        OPENCODE_BIN: '',
         OPENCODE_MODEL: 'opencode/mimo-v2-pro-free',
         OPENCODE_TIMEOUT_MS: '2000',
         AYNIG_COMMIT_HASH: 'e2e123',
