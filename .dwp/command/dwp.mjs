@@ -306,7 +306,7 @@ export async function runOpencode(runtime, { repoRoot, title, files, prompt, tim
 
 export async function findSessionId(runtime, { repoRoot, title }) {
   const bin = getOpencodeBin(runtime)
-  const { stdout } = await runtime.execFile(bin, ['session', 'list'], { cwd: repoRoot })
+  const { stdout } = await runtime.execFile(bin, ['session', 'list', '--format', 'json'], { cwd: repoRoot })
   let sessions
   try {
     sessions = JSON.parse(stdout)
@@ -422,6 +422,8 @@ async function execTicketCommand({ state, env, runtime }) {
     ],
     prompt: applyNonInteractiveGuard(tpl),
   })
+
+  runtime.logger?.debug?.(`Finished opencode run for ${title}`)
 
   const sessionId = await findSessionId(runtime, { repoRoot, title })
   requireValue(sessionId, 'Unable to determine opencode session id')
