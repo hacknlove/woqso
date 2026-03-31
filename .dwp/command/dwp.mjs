@@ -276,12 +276,21 @@ export function buildOutputPaths(repoRoot, commitHash) {
 // opencode
 // -----------------
 
-export async function runOpencode(runtime, { repoRoot, title, files, prompt, timeoutMs }) {
+function getOpencodeBin(runtime) {
   const env = runtime.env ?? process.env
+  return env.OPENCODE_BIN || 'opencode'
+}
+
+function getOpencodeModel(runtime) {
+  const env = runtime.env ?? process.env
+  return env.OPENCODE_MODEL || ''
+}
+
+export async function runOpencode(runtime, { repoRoot, title, files, prompt, timeoutMs }) {
   runtime.logger?.debug?.(`Opencode prompt for ${title}:\n${prompt}`)
 
-  const bin = env.OPENCODE_BIN || 'opencode'
-  const model = env.OPENCODE_MODEL || ''
+  const bin = getOpencodeBin(runtime)
+  const model = getOpencodeModel(runtime)
 
   const args = ['run', '--title', title]
   if (model) {
@@ -296,7 +305,8 @@ export async function runOpencode(runtime, { repoRoot, title, files, prompt, tim
 }
 
 export async function findSessionId(runtime, { repoRoot, title }) {
-  const { stdout } = await runtime.execFile('opencode', ['session', 'list'], { cwd: repoRoot })
+  const bin = getOpencodeBin(runtime)
+  const { stdout } = await runtime.execFile(bin, ['session', 'list'], { cwd: repoRoot })
   let sessions
   try {
     sessions = JSON.parse(stdout)
@@ -324,6 +334,7 @@ export async function setState(runtime, { cwd, state, subject, trailers, prompt,
     args.push('--prompt', prompt)
   }
 
+  runtime.logger?.debug?.(`[aynig] set-state ${state} (${subject})`)
   await runtime.execFile('aynig', args, { cwd })
 }
 
