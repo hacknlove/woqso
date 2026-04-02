@@ -4,7 +4,7 @@ import path from 'node:path'
 import { execFile as execFileCb } from 'node:child_process'
 import { promisify } from 'node:util'
 import { afterEach, describe, expect, it } from 'vitest'
-import { run } from '../../dwp.mjs'
+import { run } from '../../src/index.mjs'
 
 const execFile = promisify(execFileCb)
 
@@ -29,7 +29,6 @@ describe('probe (E2E-ish)', () => {
     const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'dwp-probe-'))
     fixtures.push(repoRoot)
 
-    // Real git repo for getRepoRoot.
     await execFile('git', ['init'], { cwd: repoRoot })
 
     const binDir = path.join(repoRoot, 'bin')
@@ -39,9 +38,6 @@ describe('probe (E2E-ish)', () => {
     const opencodeCalls = path.join(logsDir, 'opencode-calls.json')
     const aynigCalls = path.join(logsDir, 'aynig-calls.json')
 
-    // Fake opencode:
-    // - writes argv to file
-    // - verifies stdin reaches EOF quickly (stdin may still be "readable" even when connected to /dev/null)
     await makeExecutable(
       path.join(binDir, 'opencode'),
       `#!/usr/bin/env node\n` +
@@ -59,7 +55,6 @@ describe('probe (E2E-ish)', () => {
         `}, 120)\n`,
     )
 
-    // Fake aynig: capture args and exit.
     await makeExecutable(
       path.join(binDir, 'aynig'),
       `#!/usr/bin/env node\n` +
@@ -77,9 +72,10 @@ describe('probe (E2E-ish)', () => {
         PATH: `${binDir}:${process.env.PATH}`,
         DWP_OPENCODE_CALLS: opencodeCalls,
         DWP_AYNIG_CALLS: aynigCalls,
-        OPENCODE_BIN: '',
+        OPENCODE_BIN: 'opencode',
         OPENCODE_MODEL: 'opencode/mimo-v2-pro-free',
         OPENCODE_TIMEOUT_MS: '2000',
+        AYNIG_BIN: 'aynig',
         AYNIG_COMMIT_HASH: 'e2e123',
         AYNIG_BODY: prompt,
       },
@@ -89,14 +85,13 @@ describe('probe (E2E-ish)', () => {
     expect(opencode.args[0]).toBe('run')
     expect(opencode.args).toContain('--title')
     expect(opencode.args).toContain('e2e123-probe')
-    expect(opencode.args).toContain('--model')
+    expect(opencode.args).toContain('-m')
     expect(opencode.args).toContain('opencode/mimo-v2-pro-free')
     expect(opencode.args.at(-2)).toBe('--')
     const sentPrompt = opencode.args.at(-1)
     expect(sentPrompt).toContain('SYSTEM:')
     expect(sentPrompt).toContain('non-interactive')
     expect(sentPrompt).toContain(prompt)
-    // The key property: stdin reaches EOF quickly (not waiting for user input).
     expect(opencode.stdinEndedQuickly).toBe(true)
 
     const aynig = JSON.parse(await fs.readFile(aynigCalls, 'utf8'))

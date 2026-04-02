@@ -49,10 +49,16 @@ export async function run(command, args, options = {}) {
     logger = createLogger(),
   } = options
 
+  const childEnv = {
+    ...env,
+    CI: env.CI ?? 'true',
+    npm_config_yes: env.npm_config_yes ?? 'true',
+  }
+
   return await new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd,
-      env,
+      env: childEnv,
       stdio: ['ignore', 'pipe', 'pipe'],
     })
 

@@ -1,77 +1,24 @@
-import { describe, expect, it, vi } from 'vitest'
-import { createRuntime, runProcess } from '../../dwp.mjs'
+import { describe, expect, it } from 'vitest'
+import { getOpencodeBin, getOpencodeModel, parseDecision } from '../../src/shared/core.mjs'
 
-describe('runProcess', () => {
-  it('forwards the runtime environment to child processes', async () => {
-    const execFile = vi.fn().mockResolvedValue({ stdout: '', stderr: '' })
-    const runtime = createRuntime({
-      execFile,
-      env: { AYNIG_LOG_LEVEL: 'debug', CUSTOM_FLAG: '1' },
-      writeLog: () => {},
-    })
-
-    await runProcess(runtime, 'git', ['status'], { cwd: '/tmp/repo' })
-
-    expect(execFile).toHaveBeenCalledWith(
-      'git',
-      ['status'],
-      expect.objectContaining({
-        cwd: '/tmp/repo',
-        env: expect.objectContaining({ AYNIG_LOG_LEVEL: 'debug', CUSTOM_FLAG: '1' }),
-      }),
-    )
+describe('shared core helpers', () => {
+  it('prefers environment overrides for opencode bin and model', () => {
+    expect(getOpencodeBin({ OPENCODE_BIN: '/tmp/opencode-custom' })).toBe('/tmp/opencode-custom')
+    expect(getOpencodeModel({ OPENCODE_MODEL: 'openai/gpt-5.5' })).toBe('openai/gpt-5.5')
   })
 
-  it('logs child stdout and stderr at debug level', async () => {
-    const messages = []
-    const runtime = createRuntime({
-      env: { AYNIG_LOG_LEVEL: 'debug' },
-      writeLog: (message) => messages.push(message),
-    })
-
-    await runProcess(
-      runtime,
-      process.execPath,
-      ['-e', "process.stdout.write('out'); process.stderr.write('err')"],
-      { cwd: '/tmp' },
-    )
-
-    expect(messages).toContain(`[debug] [${process.execPath}] stdout: out`)
-    expect(messages).toContain(`[debug] [${process.execPath}] stderr: err`)
+  it('falls back to default opencode bin and model', () => {
+    expect(getOpencodeBin({})).toBe('opencode')
+    expect(getOpencodeModel({})).toBe('openai/gpt-5.4')
   })
 
-  it('fails with a timeout error when the child hangs', async () => {
-    const messages = []
-    const runtime = createRuntime({
-      env: { AYNIG_LOG_LEVEL: 'debug' },
-      writeLog: (message) => messages.push(message),
-    })
-
-    await expect(
-      runProcess(runtime, process.execPath, ['-e', 'setTimeout(() => {}, 1000)'], {
-        cwd: '/tmp',
-        timeout: 50,
-      }),
-    ).rejects.toThrow(`Command timed out after 50ms: ${process.execPath} -e setTimeout(() => {}, 1000)`)
-
-    expect(messages).toContain(
-      `[warn] Command timed out after 50ms: ${process.execPath} -e setTimeout(() => {}, 1000)`,
-    )
+  it('parses valid decisions', () => {
+    expect(parseDecision('Decision: review-plan\n\nBody', ['review-plan', 'call-human'])).toBe('review-plan')
   })
 
-  it('closes stdin by default for spawned children', async () => {
-    const runtime = createRuntime({
-      env: { AYNIG_LOG_LEVEL: 'debug' },
-      writeLog: () => {},
-    })
-
-    const { stdout } = await runProcess(
-      runtime,
-      process.execPath,
-      ['-e', "process.stdin.resume(); process.stdin.on('end', () => process.stdout.write('stdin-closed'))"],
-      { cwd: '/tmp', timeout: 500 },
+  it('rejects invalid decisions', () => {
+    expect(() => parseDecision('Decision: implement\n\nBody', ['review-plan', 'call-human'])).toThrow(
+      'Invalid output decision: Decision: implement',
     )
-
-    expect(stdout).toBe('stdin-closed')
   })
 })
