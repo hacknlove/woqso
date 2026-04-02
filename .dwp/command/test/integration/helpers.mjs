@@ -51,7 +51,7 @@ export async function setupCommandMocks({ repoRoot, binDir, outputDecisions = {}
 ` +
       `await fs.mkdir(path.dirname(logPath), { recursive: true })
 ` +
-      `await fs.appendFile(logPath, JSON.stringify({ command: 'git', args }) + '\n', 'utf8')
+      `await fs.appendFile(logPath, JSON.stringify({ command: 'git', args }) + '\\n', 'utf8')
 ` +
       `if (args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
 ` +
@@ -89,7 +89,7 @@ export async function setupCommandMocks({ repoRoot, binDir, outputDecisions = {}
 ` +
       `await fs.mkdir(path.dirname(logPath), { recursive: true })
 ` +
-      `await fs.appendFile(logPath, JSON.stringify({ command: 'opencode', args }) + '\n', 'utf8')
+      `await fs.appendFile(logPath, JSON.stringify({ command: 'opencode', args }) + '\\n', 'utf8')
 ` +
       `if (args[0] === 'run') {
 ` +
@@ -147,7 +147,7 @@ export async function setupCommandMocks({ repoRoot, binDir, outputDecisions = {}
 ` +
       `await fs.mkdir(path.dirname(logPath), { recursive: true })
 ` +
-      `await fs.appendFile(logPath, JSON.stringify({ command: 'aynig', args }) + '\n', 'utf8')
+      `await fs.appendFile(logPath, JSON.stringify({ command: 'aynig', args }) + '\\n', 'utf8')
 ` +
       `process.exit(0)
 `,
