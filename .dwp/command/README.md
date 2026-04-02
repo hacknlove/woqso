@@ -12,12 +12,15 @@ This package contains the workflow runtime for DWP commands in this repository.
 
 The files at `.dwp/command/<state>` are the AYNIG-visible executables.
 
-They are thin Node entrypoints that delegate to modules in `src/commands/`.
+They are thin Node entrypoints that delegate to the canonical runtime in `src/index.mjs`.
+That runtime keeps prompts in Markdown and uses a small shared core for process execution, Git helpers, AYNIG state transitions, and output handling.
+
+`dwp.mjs` is now legacy reference code and should not be treated as the primary implementation path.
 
 ## Structure
 
-- `src/commands/`: one module per workflow command
-- `src/shared/`: reusable helpers for env parsing, prompt rendering, CLI execution, and state transitions
+- `src/index.mjs`: canonical workflow runtime / dispatch path
+- `src/shared/`: reusable helpers for process execution, Git helpers, AYNIG state transitions, prompts, and file handling
 - `prompts/`: Markdown templates used to build `opencode` prompts
 - `test/unit/`: focused tests for shared primitives
 - `test/integration/`: business-level workflow tests with mocked CLIs and filesystem state
