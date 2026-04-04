@@ -1,34 +1,4 @@
 #!/usr/bin/env node
-import { logger } from "./src/logger.mjs"
+import { main } from "./src/index.js"
 
-logger.debug('plan command starts');
-
-const ticket = process.env.AYNIG_TRAILER_DPW_TICKET;
-
-logger.debug(ticket)
-
-process.exit();
-
-const config = {
-    sessionSufix: 'plan',
-    promptName: 'plan',
-    allowedDecisions: ['review-plan', 'call-human'],
-    stage: 'ticket',
-    keepTrailers: false,
-    buildTrailers: ({ relativeTicketPath, sessionId }) => [
-      `dwp-ticket: ${relativeTicketPath}`,
-      'dwp-plan-version: 1',
-      `dwp-planner-session-id: ${sessionId}`,
-    ],
-    subject: ({ decision, ticketName }) =>
-      decision === 'review-plan' ? `plan: create ${ticketName} plan` : `plan: needs human input for ${ticketName}`,
-    promptVars: ({ repoContext, relativeTicketPath, relativeOutputPath, body }) => ({
-      repo_context: repoContext.trim(),
-      relative_ticket_path: relativeTicketPath,
-      relative_output_path: relativeOutputPath,
-      additional_instructions_block: body ? `\n\nAdditional instructions:\n${body}` : '',
-    }),
-}
-
-
-await run('plan')
+main();
